@@ -73,7 +73,7 @@ class RoomService extends BaseService{
     }
 
     /**
-     * 创建聊天
+     * 创建聊天室
      *
      * @param $persons
      * @return array
@@ -81,9 +81,10 @@ class RoomService extends BaseService{
     static function createRoom($persons){
         $person_num = count($persons);
         if(!$person_num){
-            return self::createReturn(false, null, '获取失败');
+            return self::createReturn(false, null, '创建失败');
         }
 
+        //当需要创建聊天的成员已有聊天室时，返回已有的聊天室
         $res = self::getRoomIdByPersons($persons);
         if($res['status']){
             return self::createReturn(true, $res['data'], '创建成功');

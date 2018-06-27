@@ -91,6 +91,9 @@ class IndexController extends AdminBase{
         $this->display();
     }
 
+    /**
+     * 获取聊天记录
+     */
     public function getMsgList(){
         $room_id = I('get.room_id');
         $page = I('get.page', 1);
@@ -103,6 +106,9 @@ class IndexController extends AdminBase{
         $this->ajaxReturn($res);
     }
 
+    /**
+     * 获取新的聊天记录
+     */
     public function getNewMsg(){
         $room_id = I('get.room_id');
         $last_time = I('get.last_time');
