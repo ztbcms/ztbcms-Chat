@@ -97,10 +97,20 @@ class RoomService extends BaseService{
             'last_msg' => '',
             'last_time' => '',
             'last_person_name' => '',
-            'person_num' => count($persons),
+            'person_num' => 0,
             'add_time' => $time
         ]);
+        $success = 0;
         foreach($persons as $person){
+            $count = D('Chat/RoomPerson')->where([
+                'room_id' => $room_id,
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id'],
+            ])->count();
+            if($count){
+                //过滤已存在的成员
+                continue;
+            }
             D('Chat/RoomPerson')->add([
                 'room_id' => $room_id,
                 'person_type' => $person['person_type'],
@@ -109,7 +119,9 @@ class RoomService extends BaseService{
                 'person_pic' => $person['person_pic'],
                 'add_time' => $time
             ]);
+            $success++;
         }
+        D('Chat/Room')->where(['id' => $room_id])->save(['person_num' => $success]);
         return self::createReturn(true, $room_id, '创建成功');
     }
 
@@ -146,9 +158,10 @@ class RoomService extends BaseService{
                 'person_id' => $person['person_id'],
             ])->count();
             if($count){
+                //过滤已存在的成员
                 continue;
             }
-            D('Chat/RoomPerson')->add([
+            $res = D('Chat/RoomPerson')->add([
                 'room_id' => $room_id,
                 'person_type' => $person['person_type'],
                 'person_id' => $person['person_id'],
@@ -156,7 +169,9 @@ class RoomService extends BaseService{
                 'person_pic' => $person['person_pic'],
                 'add_time' => $time
             ]);
-            $success++;
+            if($res){
+                $success++;
+            }
         }
         $res = D('Chat/Room')->where(['id' => $room_id])->save(['person_num' => ['exp', 'person_num+'.$success]]);
         return self::createReturn(true, $res, '添加成功');

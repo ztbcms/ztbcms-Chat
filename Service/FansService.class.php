@@ -112,4 +112,36 @@ class FansService extends BaseService{
             return self::createReturn(false, null, '未关注');
         }
     }
+
+    /**
+     * 更新粉丝信息(头像与昵称)
+     *
+     * @param $person
+     * @param $be_person
+     * @return array
+     */
+    static function refreshFans($person, $be_person){
+        $count = D('Chat/Fans')->where([
+            'person_type' => $person['person_type'],
+            'person_id' => $person['person_id'],
+            'be_person_type' => $be_person['person_type'],
+            'be_person_id' => $be_person['person_id']
+        ])->count();
+        if($count){
+            $res = D('Chat/Fans')->where([
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id'],
+                'be_person_type' => $be_person['person_type'],
+                'be_person_id' => $be_person['person_id']
+            ])->save([
+                'person_name' => $person['person_name'],
+                'person_pic' => $person['person_pic'],
+                'be_person_name' => $be_person['person_name'],
+                'be_person_pic' => $be_person['person_pic']
+            ]);
+            return self::createReturn(true, $res, '更新成功');
+        }else{
+            return self::createReturn(false, null, '更新失败');
+        }
+    }
 }
