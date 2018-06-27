@@ -45,12 +45,50 @@ class RoomService extends BaseService{
     }
 
     /**
+     * 获取聊天室ID
+     *
+     * @param $persons
+     * @return array
+     */
+    static function getRoomIdByPersons($persons){
+        $tmp = [];
+        foreach($persons as $person){
+            $where = [
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id']
+            ];
+            $tmp[] = D('Chat/RoomPerson')->where($where)->getField('room_id', true);
+        }
+        $room_ids = $tmp[0];
+        foreach($tmp as $v){
+            $room_ids = array_intersect($room_ids, $v);
+        }
+        if($room_ids){
+            $room_id = D('Chat/Room')->where(['id' => ['IN', $room_ids], 'person_num' => $person_num])->getField('id');
+            if($room_id){
+                return self::createReturn(true, $room_id, '获取成功');
+            }
+        }
+        return self::createReturn(false, null, '获取失败');
+    }
+
+    /**
      * 创建聊天
      *
      * @param $persons
      * @return array
      */
     static function createRoom($persons){
+        $person_num = count($persons);
+        if(!$person_num){
+            return self::createReturn(false, null, '获取失败');
+        }
+
+        $res = self::getRoomIdByPersons($persons);
+        if($res['status']){
+            return self::createReturn(true, $res['data'], '创建成功');
+        }
+
         $time = time();
         $room_id = D('Chat/Room')->add([
             'name' => implode('、', array_column($persons, 'person_name')),
@@ -58,6 +96,7 @@ class RoomService extends BaseService{
             'last_msg' => '',
             'last_time' => '',
             'last_person_name' => '',
+            'person_num' => count($persons),
             'add_time' => $time
         ]);
         foreach($persons as $person){
@@ -82,6 +121,72 @@ class RoomService extends BaseService{
     static function getRoomPerson($room_id){
         $list = D('Chat/RoomPerson')->where(['room_id' => $room_id])->select();
         return self::createReturn(true, $list ?: [], '获取成功');
+    }
+
+    /**
+     * 添加聊天成员
+     *
+     * @param $room_id
+     * @param $persons
+     * @return array
+     */
+    static function addRoomPerson($room_id, $persons){
+        $person_num = count($persons);
+        if(!$person_num){
+            return self::createReturn(false, null, '添加失败');
+        }
+
+        $time = time();
+        $success = 0;
+        foreach($persons as $person){
+            $count = D('Chat/RoomPerson')->where([
+                'room_id' => $room_id,
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id'],
+            ])->count();
+            if($count){
+                continue;
+            }
+            D('Chat/RoomPerson')->add([
+                'room_id' => $room_id,
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id'],
+                'person_name' => $person['person_name'],
+                'person_pic' => $person['person_pic'],
+                'add_time' => $time
+            ]);
+            $success++;
+        }
+        $res = D('Chat/Room')->where(['id' => $room_id])->save(['person_num' => ['exp', 'person_num+'.$success]]);
+        return self::createReturn(true, $res, '添加成功');
+    }
+
+    /**
+     * 删除聊天成员
+     * TODO 管理员权限限制
+     *
+     * @param $room_id
+     * @param $persons
+     * @return array
+     */
+    static function delRoomPerson($room_id, $persons){
+        $person_num = count($persons);
+        if(!$person_num){
+            return self::createReturn(false, null, '删除失败');
+        }
+        $success = 0;
+        foreach($persons as $person){
+            $res = D('Chat/RoomPerson')->where([
+                'room_id' => $room_id,
+                'person_type' => $person['person_type'],
+                'person_id' => $person['person_id'],
+            ])->delete();
+            if($res){
+                $success++;
+            }
+        }
+        $res = D('Chat/Room')->where(['id' => $room_id])->save(['person_num' => ['exp', 'person_num-'.$success]]);
+        return self::createReturn(true, $res, '添加成功');
     }
 
     /**

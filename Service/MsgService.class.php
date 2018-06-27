@@ -125,4 +125,36 @@ class MsgService extends BaseService{
         }
         return self::createReturn(true, $items ?: [], '获取成功');
     }
+
+    /**
+     * 群发 (私聊)
+     *
+     * @param array $person     发送人
+     * @param array $to_persons 接收人
+     * @param $content
+     * @param string $content_type
+     * @return array
+     */
+    static function sendGroupMsg($person, $to_persons, $content, $content_type = MsgModel::CONTENT_TYPE_TEXT){
+        if(empty($to_persons)){
+            return self::createReturn(false, null, '参数错误');
+        }
+        $success = 0;
+        foreach($to_persons as $to_person){
+            $persons = [
+                ['person_type' => $person['person_type'], 'person_id' => $person['person_id']],
+                ['person_type' => $to_person['person_type'], 'person_id' => $to_person['person_id']],
+            ];
+            $res = RoomService::createRoom($persons);
+            if($res['status']){
+                $room_id = $res['data'];
+                $res = MsgService::sendMsg($room_id, $person, $content, $content_type);
+                if($res['status']){
+                    //发送成功数量+1
+                    $success++;
+                }
+            }
+        }
+        return self::createReturn(true, null, '发送成功：'.$success);
+    }
 }
