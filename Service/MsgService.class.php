@@ -31,12 +31,13 @@ class MsgService extends BaseService{
         if(!$room_person_id){
             return self::createReturn(false, null, '发送失败');
         }
+        $time = time();
         $res = D('Chat/Msg')->add([
             'room_id' => $room_id,
             'room_person_id' => $room_person_id,
             'content' => $content,
             'content_type' => $content_type,
-            'add_time' => time(),
+            'add_time' => $time,
             'person_type' => $person['person_type'],
             'person_id' => $person['person_id'],
             'person_name' => $person['person_name'],
@@ -45,6 +46,23 @@ class MsgService extends BaseService{
         //未读数量+1
         D('Chat/RoomPerson')->where(['room_id' => $room_id, 'id' => ['NEQ', $room_person_id]])->save([
             'no_read_num' => ['exp', '`no_read_num`+1']
+        ]);
+        //最终消息修改
+        if($content_type == MsgModel::CONTENT_TYPE_TEXT){
+            $last_msg = $content;
+        }elseif($content_type == MsgModel::CONTENT_TYPE_IMAGE){
+            $last_msg = '[图片]';
+        }elseif($content_type == MsgModel::CONTENT_TYPE_VOICE){
+            $last_msg = '[语音]';
+        }elseif($content_type == MsgModel::CONTENT_TYPE_VIDEO){
+            $last_msg = '[视频]';
+        }else{
+            $last_msg = $content;
+        }
+        D('Chat/Room')->where(['id' => $room_id])->save([
+            'last_msg' => $last_msg,
+            'last_time' => $time,
+            'last_person_name' => $person['person_name']
         ]);
         return self::createReturn(true, $res, '发送成功');
     }
